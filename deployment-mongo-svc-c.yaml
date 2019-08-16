@@ -1,0 +1,176 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: icproxy
+---
+apiVersion: v1
+kind: RoleBinding
+metadata:
+  name: icproxy-view
+subjects:
+- kind: ServiceAccount
+  name: icproxy
+roleRef:
+  kind: Role
+  name: view
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata: 
+  name: tcp-mongo-c
+spec:
+  replicas: 1
+  selectors:
+    matchLabels:
+      application: tcp-mongo-c
+  template:
+    metadata:
+      labels:
+        application: tcp-mongo-c
+    spec:
+      containers: 
+        - image: mongo
+          name: mongo-c
+          command:
+            - mongod
+            - "--replSet"
+            - rs0
+            - "--bind_ip_all"
+          imagePullPolicy: IfNotPresent
+          volumeMounts: 
+            - mountPath: /data/db
+              name: mongodb-data
+      volumes: 
+        - name: mongodb-data
+          emptyDir: {}
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tcp-mongo-a-proxy
+spec:
+  selector:
+    matchLabels:
+      application: tcp-mongo-a-proxy
+  template:
+    metadata:
+      labels:
+        application: tcp-mongo-a-proxy
+    spec:
+      serviceAccountName: icproxy
+      containers:
+      - name: proxy
+        env:
+        - name: ICPROXY_CONFIG
+          value: "amqp:mongo-svc-a=>tcp:27017,tcp:27017=>amqp:mongo-svc-a"
+        - name: ICPROXY_POD_SELECTOR
+          value: "application=tcp-mongo-a"
+        image: quay.io/gordons/icproxy
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: connect
+          mountPath: "/etc/messaging/"
+          readOnly: true
+      volumes:
+      - name: connect
+        secret:
+          secretName: myrouter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc-a
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    application: tcp-mongo-a-proxy
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tcp-mongo-b-proxy
+spec:
+  selector:
+    matchLabels:
+      application: tcp-mongo-b-proxy
+  template:
+    metadata:
+      labels:
+        application: tcp-mongo-b-proxy
+    spec:
+      serviceAccountName: icproxy
+      containers:
+      - name: proxy
+        env:
+        - name: ICPROXY_CONFIG
+          value: "amqp:mongo-svc-b=>tcp:27017,tcp:27017=>amqp:mongo-svc-b"
+        - name: ICPROXY_POD_SELECTOR
+          value: "application=tcp-mongo-b"
+        image: quay.io/gordons/icproxy
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: connect
+          mountPath: "/etc/messaging/"
+          readOnly: true
+      volumes:
+      - name: connect
+        secret:
+          secretName: myrouter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc-b
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    application: tcp-mongo-b-proxy
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: tcp-mongo-c-proxy
+spec:
+  selector:
+    matchLabels:
+      application: tcp-mongo-c-proxy
+  template:
+    metadata:
+      labels:
+        application: tcp-mongo-c-proxy
+    spec:
+      serviceAccountName: icproxy
+      containers:
+      - name: proxy
+        env:
+        - name: ICPROXY_CONFIG
+          value: "amqp:mongo-svc-c=>tcp:27017,tcp:27017=>amqp:mongo-svc-c"
+        - name: ICPROXY_POD_SELECTOR
+          value: "application=tcp-mongo-c"
+        image: quay.io/gordons/icproxy
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: connect
+          mountPath: "/etc/messaging/"
+          readOnly: true
+      volumes:
+      - name: connect
+        secret:
+          secretName: myrouter
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo-svc-c
+spec:
+  ports:
+  - port: 27017
+    targetPort: 27017
+  selector:
+    application: tcp-mongo-c-proxy
+---
