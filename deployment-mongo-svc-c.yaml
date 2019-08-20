@@ -1,5 +1,19 @@
 ---
 apiVersion: v1
+kind: Secret
+metadata:
+  name: myrouter
+  labels:
+    application: messaging
+type: Opaque
+stringData:
+  connect.json: |-
+    {
+        "scheme": "amqp",
+        "host": "messaging"
+    }
+---
+apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: icproxy
