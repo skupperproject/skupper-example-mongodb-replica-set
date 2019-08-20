@@ -32,10 +32,10 @@ For each cluster, you will need the following information:
 1. On your local machine, make a directory for this tutorial and clone the following repos into it:
 
    ```bash
-   $ mkdir mongodb-replica-demo
-   $ cd mongodb-replica-demo
+   $ mkdir mongodb-replica-set-demo
+   $ cd mongodb-replica-set-demo
    $ git clone git@github.com:skubaproject/skoot.git # for creating the application router network
-   $ git clone git@github.com:skubaproject/skupper-example-mongodb-replica.git # for deploying the MongoDB members
+   $ git clone git@github.com:skubaproject/skupper-example-mongodb-replica-set.git # for deploying the MongoDB members
    ```
 
 2. Prepare the OpenShift clusters.
@@ -44,7 +44,7 @@ For each cluster, you will need the following information:
    2. In each cluster, create a namespace for this demo.
   
       ```bash
-      $ oc new-project mongodb-replica-demo
+      $ oc new-project mongodb-replica-set-demo
       ```
 
 ## Step 2: Define Cluster Topology Values
@@ -57,7 +57,7 @@ two public clusters and one private cluster:
    ```bash
    $ export SKUPPER_PUBLIC_CLUSTER_COUNT=2
    $ export SKUPPER_PRIVATE_CLUSTER_COUNT=1
-   $ export SKUPPER_NAMESPACE="mongodb-replica-demo"
+   $ export SKUPPER_NAMESPACE="mongodb-replica-set-demo"
    $ export SKUPPER_PUBLIC_CLUSTER_SUFFIX_1="mycluster1.devcluster.openshift.com"
    $ export SKUPPER_PUBLIC_CLUSTER_SUFFIX_2="mycluster2.devcluster.openshift.com"
    $ export SKUPPER_PUBLIC_CLUSTER_NAME_1="us-east"
@@ -70,7 +70,7 @@ two public clusters and one private cluster:
 To generate the deployment yaml files for the defined topology, execute the following:
 
    ```bash
-   $ ~mongodb-replica-demo/skoot/scripts/arn.sh | docker run -i quay.io/skupper/skoot | tar --extract
+   $ ~mongodb-replica-set-demo/skoot/scripts/arn.sh | docker run -i quay.io/skupper/skoot | tar --extract
    ```
 
 ## Step 4: Deploy Application Router Network
@@ -80,17 +80,17 @@ Log in to each cluster, create the common namespace from above and deploy the co
 1. In the terminal for the private cloud, deploy the application router:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/yaml/on-prem.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/yaml/on-prem.yaml
    ```
 2. In the terminal for the first public cloud, deploy the application router:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/yaml/us-east.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/yaml/us-east.yaml
    ```
 3. In the terminal for the second public cloud, deploy the application router:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/yaml/us-west.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/yaml/us-west.yaml
    ```
 
 ## Step 5: Deploy the cloud-redundant MongoDB replica set
@@ -102,19 +102,19 @@ The `demos/mongoDB-replica` directory contains the YAML files that you will use 
 1. In the terminal for the private cloud, deploy the primary MongoDB member:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/skupper-example-mongodb-replica/deployment-mongo-svc-a.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/skupper-example-mongodb-replica/deployment-mongo-svc-a.yaml
    ```
 
 2. In the terminal for the first public cloud, deploy the first backup MongoDB member:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/skupper-example-mongodb-replica/deployment-mongo-svc-b.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/skupper-example-mongodb-replica/deployment-mongo-svc-b.yaml
    ```
 
 3. In the terminal for the second public cloud, deploy the second backup MongoDB member:
 
    ```bash
-   $ oc apply -f ~/mongodb-replica-demo/skupper-example-mongodb-replica/deployment-mongo-svc-c.yaml
+   $ oc apply -f ~/mongodb-replica-set-demo/skupper-example-mongodb-replica/deployment-mongo-svc-c.yaml
    ```
 
 ## Step 6: Form the MongoDB replica set
@@ -125,7 +125,7 @@ After deploying the MongoDB members into the private and public cloud clusters, 
 the `mongo-svc-a` instance and initiate the member set formation:
 
    ```bash
-   $ cd ~/mongodb-replica-demo/skupper-example-mongodb-replica
+   $ cd ~/mongodb-replica-set-demo/skupper-example-mongodb-replica
    $ mongo --host $(oc get service mongo-svc-a -o=jsonpath='{.spec.clusterIP}')
    > load("replica.js")
    ```
