@@ -34,8 +34,7 @@ kind: Service
 metadata:
   name: mongo-svc-a
   annotations:
-    proxy.skupper.github.com/network: skupper
-    proxy.skupper.github.com/protocol: tcp  
+    skupper.io/proxy: tcp
 spec:
   ports:
   - port: 27017
@@ -48,8 +47,7 @@ kind: Service
 metadata:
   name: mongo-svc-b
   annotations:
-    proxy.skupper.github.com/network: skupper
-    proxy.skupper.github.com/protocol: tcp
+    skupper.io/proxy: tcp
 spec:
   ports:
   - port: 27017
@@ -62,8 +60,7 @@ kind: Service
 metadata:
   name: mongo-svc-c
   annotations:
-    proxy.skupper.github.com/network: skupper
-    proxy.skupper.github.com/protocol: tcp
+    skupper.io/proxy: tcp
 spec:
   ports:
   - port: 27017

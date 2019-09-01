@@ -28,7 +28,7 @@ You must have access to three OpenShift clusters:
    $ mkdir mongodb-demo
    $ cd mongodb-demo
    $ git clone git@github.com:skupperproject/skupper-example-mongodb-replica-set.git # for deploying the MongoDB members
-   $ wget https://github.com/skupperproject/skupper-cli/releases/download/dummy/linux.tgz -O - | tar -xzf - # cli for application router network
+   $ wget https://github.com/skupperproject/skupper-cli/releases/download/dummy3/linux.tgz -O - | tar -xzf - # cli for application router network
    ```
 
 3. Prepare the OpenShift clusters.
@@ -47,25 +47,25 @@ On each cluster, define the application router role and connectivity to peer clu
 1. In the terminal for the first public cluster, deploy the *public1* application router, and create its secrets:
 
    ```bash
-   $ ~/mongodb-demo/skupper init --hub --name public1
-   $ ~/mongodb-demo/skupper secret --file ~/mongodb-demo/private1-to-public1-secret.yaml --subject private1
-   $ ~/mongodb-demo/skupper secret --file ~/mongodb-demo/public2-to-public1-secret.yaml --subject public2
+   $ ~/mongodb-demo/skupper init --id public1
+   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/private1-to-public1-secret.yaml -i private1
+   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/public2-to-public1-secret.yaml -i public2
    ```
 
 2. In the terminal for the second public cluster, deploy the *public2* application router, create its secrets and define its connections to the peer *public1* cluster:
 
    ```bash
-   $ ~/mongodb-demo/skupper init --hub --name public2
-   $ ~/mongodb-demo/skupper secret --file ~/mongodb-demo/private1-to-public2-secret.yaml --subject private1
-   $ ~/mongodb-demo/skupper connect --secret ~/mongodb-demo/public2-to-public1-secret.yaml --name public1
+   $ ~/mongodb-demo/skupper init --id public2
+   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/private1-to-public2-secret.yaml -i private1
+   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/public2-to-public1-secret.yaml --name public1
    ```
 
 3. In the terminal for the private cluster, deploy the *on-prem* application router and define its connections to the public clusters
 
    ```bash
-   $ ~/mongodb-demo/skupper init --name private1
-   $ ~/mongodb-demo/skupper connect --secret ~/mongodb-demo/private1-to-public1-secret.yaml --name public1
-   $ ~/mongodb-demo/skupper connect --secret ~/mongodb-demo/private1-to-public2-secret.yaml --name public2
+   $ ~/mongodb-demo/skupper init --edge --id private1
+   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/private1-to-public1-secret.yaml --name public1
+   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/private1-to-public2-secret.yaml --name public2
    ```
    
 ## Step 5: Deploy the cloud-redundant MongoDB replica set
