@@ -35,6 +35,7 @@ metadata:
   name: mongo-svc-a
   annotations:
     skupper.io/proxy: tcp
+    internal.skupper.io/origin: none
 spec:
   ports:
   - port: 27017
@@ -48,6 +49,7 @@ metadata:
   name: mongo-svc-b
   annotations:
     skupper.io/proxy: tcp
+    internal.skupper.io/origin: none
 spec:
   ports:
   - port: 27017
@@ -61,6 +63,7 @@ metadata:
   name: mongo-svc-c
   annotations:
     skupper.io/proxy: tcp
+    internal.skupper.io/origin: none
 spec:
   ports:
   - port: 27017

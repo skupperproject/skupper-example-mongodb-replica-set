@@ -124,22 +124,31 @@ Now that the MongoDB members have formed a replica set and are connected by the 
    > db.coll.count()
    ```
 
-2. Check the first backup member to verify that it has a copy of the documents that you inserted. You can acquire a connection to a backup member by instantiating a connection object using the `Mongo()` constructor within the `mongo-svc-a` shell:
+2. Using the mongo shell check the first backup member to verify that it has a copy of the documents that you inserted:
 
    ```bash
-   > msbConn = new Mongo("mongo-svc-b")
-   > msbDB = msbConn.getDB("test")
-   > msbDB.setSlaveOk()
-   > msbDB.coll.find()
+   $ mongo --host $(oc get service mongo-svc-b -o=jsonpath='{.spec.clusterIP}')
    ```
 
-3. Check the second backup member to verify that it also has a copy of the documents.
+   ```bash
+   > use test
+   > db.setSlaveOk()
+   > db.coll.count()
+   > db.coll.find()
+   ```
+
+
+3. Using the mongo shell check the second backup member to verify that it also has a copy of the documents that you inserted.
 
    ```bash
-   > mscConn = new Mongo("mongo-svc-c")
-   > mscDB = mscConn.getDB("test")
-   > msbDB.setSlaveOk()
-   > mscDB.coll.find()
+   $ mongo --host $(oc get service mongo-svc-c -o=jsonpath='{.spec.clusterIP}')
+   ```
+
+   ```bash
+   > use test
+   > db.setSlaveOk()
+   > db.coll.count()
+   > db.coll.find()
    ```
 
 ## Next steps
