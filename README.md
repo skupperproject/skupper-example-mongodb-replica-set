@@ -1,4 +1,4 @@
-# Sharing a MongoDB database across clusters
+# Deploying a MongoDB database replica set across clusters
 
 This tutorial demonstrates how to share a MongoDB database across multiple Kubernetes clusters that are located in different public and private cloud providers.
 
@@ -8,7 +8,7 @@ To complete this tutorial, do the following:
 
 * [Prerequisites](#prerequisites)
 * [Step 1: Set up the demo](#step-1-set-up-the-demo)
-* [Step 2: Deploy Application Router Network](#step-4-deploy-application-router-network)
+* [Step 2: Deploy the Skupper Network](#step-4-deploy-the-skupper-network)
 * [Step 3: Deploy the cloud-redundant MongoDB replica set](#step-5-deploy-the-cloud-redundant-mongodb-replica-set)
 * [Step 4: Form the MongoDB replica set](#step-6-form-the-mongodb-replica-set)
 * [Step 5: Insert documents and observe replication](#step-7-insert-documents-and-observe-replication)
@@ -27,8 +27,19 @@ You must have access to three OpenShift clusters:
    ```bash
    $ mkdir mongodb-demo
    $ cd mongodb-demo
-   $ git clone git@github.com:skupperproject/skupper-example-mongodb-replica-set.git # for deploying the MongoDB members
-   $ wget https://github.com/skupperproject/skupper-cli/releases/download/dummy3/linux.tgz -O - | tar -xzf - # cli for application router network
+   $ git clone https://github.com/skupperproject/skupper-example-mongodb-replica-set.git
+   $ curl -fL https://github.com/skupperproject/skupper-cli/releases/download/dummy3/linux.tgz -o skupper.tgz
+   $ mkdir -p $HOME/bin
+   $ tar -xf skupper.tgz --directory $HOME/bin
+   $ export PATH=$PATH:$HOME/bin
+   ```
+
+   To test your installation, run the 'skupper' command with no arguments. It will print a usage summary.
+
+   ```bash
+   $ skupper
+   usage: skupper <command> <args>
+   [...]
    ```
 
 3. Prepare the OpenShift clusters.
@@ -37,38 +48,38 @@ You must have access to three OpenShift clusters:
    2. In each cluster, create a namespace for this demo.
   
       ```bash
-      $ oc new-project mongodb-demo
+      $ kubectl new-project mongodb-demo
       ```
 
-## Step 2: Deploy Application Router Network
+## Step 2: Deploy the Skupper Network
 
 On each cluster, define the application router role and connectivity to peer clusters.
 
 1. In the terminal for the first public cluster, deploy the *public1* application router, and create its secrets:
 
    ```bash
-   $ ~/mongodb-demo/skupper init --id public1
-   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/private1-to-public1-secret.yaml -i private1
-   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/public2-to-public1-secret.yaml -i public2
+   $ skupper init --id public1
+   $ skupper secret ~/mongodb-demo/private1-to-public1-secret.yaml -i private1
+   $ skupper secret ~/mongodb-demo/public2-to-public1-secret.yaml -i public2
    ```
 
 2. In the terminal for the second public cluster, deploy the *public2* application router, create its secrets and define its connections to the peer *public1* cluster:
 
    ```bash
-   $ ~/mongodb-demo/skupper init --id public2
-   $ ~/mongodb-demo/skupper secret ~/mongodb-demo/private1-to-public2-secret.yaml -i private1
-   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/public2-to-public1-secret.yaml --name public1
+   $ skupper init --id public2
+   $ skupper secret ~/mongodb-demo/private1-to-public2-secret.yaml -i private1
+   $ skupper connect ~/mongodb-demo/public2-to-public1-secret.yaml --name public1
    ```
 
-3. In the terminal for the private cluster, deploy the *on-prem* application router and define its connections to the public clusters
+3. In the terminal for the private cluster, deploy the *private1* application router and define its connections to the public clusters
 
    ```bash
-   $ ~/mongodb-demo/skupper init --edge --id private1
-   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/private1-to-public1-secret.yaml --name public1
-   $ ~/mongodb-demo/skupper connect ~/mongodb-demo/private1-to-public2-secret.yaml --name public2
+   $ skupper init --edge --id private1
+   $ skupper connect ~/mongodb-demo/private1-to-public1-secret.yaml --name public1
+   $ skupper connect ~/mongodb-demo/private1-to-public2-secret.yaml --name public2
    ```
    
-## Step 5: Deploy the cloud-redundant MongoDB replica set
+## Step 3: Deploy the cloud-redundant MongoDB replica set
 
 After creating the application router network, you deploy the three-member MongoDB replica set. The member in the private cloud will be designated as the primary, and the members on the public cloud clusters will be redundant backups.
 
@@ -92,7 +103,7 @@ The `demos/mongoDB-replica` directory contains the YAML files that you will use 
    $ oc apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-svc-c.yaml
    ```
 
-## Step 6: Form the MongoDB replica set
+## Step 4: Form the MongoDB replica set
 
 After deploying the MongoDB members into the private and public cloud clusters, form them into a replica set. The application router network connects the members and enables them to form the replica set even though they are running in separate clusters.  
 
@@ -101,7 +112,7 @@ the `mongo-svc-a` instance and initiate the member set formation:
 
    ```bash
    $ cd ~/mongodb-demo/skupper-example-mongodb-replica-set
-   $ mongo --host $(oc get service mongo-svc-a -o=jsonpath='{.spec.clusterIP}')
+   $ mongo --host $(kubectl get service mongo-svc-a -o=jsonpath='{.spec.clusterIP}')
    > load("replica.js")
    ```
 
@@ -111,7 +122,7 @@ the `mongo-svc-a` instance and initiate the member set formation:
    > rs.status()
    ```
 
-## Step 7: Insert documents and observe replication
+## Step 5: Insert documents and observe replication
 
 Now that the MongoDB members have formed a replica set and are connected by the application router network, you can insert some documents on the primary member, and see them replicated to the backup members.
 
@@ -127,7 +138,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 2. Using the mongo shell check the first backup member to verify that it has a copy of the documents that you inserted:
 
    ```bash
-   $ mongo --host $(oc get service mongo-svc-b -o=jsonpath='{.spec.clusterIP}')
+   $ mongo --host $(kubectl get service mongo-svc-b -o=jsonpath='{.spec.clusterIP}')
    ```
 
    ```bash
@@ -141,7 +152,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 3. Using the mongo shell check the second backup member to verify that it also has a copy of the documents that you inserted.
 
    ```bash
-   $ mongo --host $(oc get service mongo-svc-c -o=jsonpath='{.spec.clusterIP}')
+   $ mongo --host $(kubectl get service mongo-svc-c -o=jsonpath='{.spec.clusterIP}')
    ```
 
    ```bash
@@ -153,4 +164,29 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 
 ## Next steps
 
-TODO: describe what the user should do after completing this tutorial
+Restore your cluster environment by returning the resource created in the demonstration. On each cluster, delete the demo resources and the skupper network:
+
+1. In the terminal for the *private1* cluster, delete the resources:
+
+
+   ```bash
+   $ oc delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-svc-a.yaml
+   $ skupper delete
+   ```
+
+2. In the terminal for the *public1* cluster, delete the resources:
+
+
+   ```bash
+   $ oc delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-svc-b.yaml
+   $ skupper delete
+   ```
+
+3. In the terminal for the *public2* cluster, delete the resources:
+
+
+   ```bash
+   $ oc delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-svc-c.yaml
+   $ skupper delete
+   ```
+

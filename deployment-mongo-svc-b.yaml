@@ -32,42 +32,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: mongo-svc-a
-  annotations:
-    skupper.io/proxy: tcp
-    internal.skupper.io/origin: none
-spec:
-  ports:
-  - port: 27017
-    targetPort: 27017
-  selector:
-    application: mongo-a
----
-apiVersion: v1
-kind: Service
-metadata:
   name: mongo-svc-b
   annotations:
     skupper.io/proxy: tcp
-    internal.skupper.io/origin: none
 spec:
   ports:
   - port: 27017
     targetPort: 27017
   selector:
     application: mongo-b
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo-svc-c
-  annotations:
-    skupper.io/proxy: tcp
-    internal.skupper.io/origin: none
-spec:
-  ports:
-  - port: 27017
-    targetPort: 27017
-  selector:
-    application: mongo-c
 ---
