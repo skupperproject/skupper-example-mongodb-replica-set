@@ -50,9 +50,7 @@ While the detailed steps are not included here, this demonstration can alternati
 
    1. On your local machine, log in to each cluster in a separate terminal session.
    2. In each cluster, create a namespace to use for the demo.
-   3. In each cluster, set the kubectl config context to use the demo namespace (see `kubectl cheat sheet`__ )
-
-__ https://kubernetes.io/docs/reference/kubectl/cheatsheet/
+   3. In each cluster, set the kubectl config context to use the demo namespace [(see kubectl cheat sheet)](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
 
 ## Step 2: Deploy the Skupper Network
 
