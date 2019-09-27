@@ -32,7 +32,7 @@ While the detailed steps are not included here, this demonstration can alternati
    mkdir mongodb-demo
    cd mongodb-demo
    git clone https://github.com/skupperproject/skupper-example-mongodb-replica-set.git
-   curl -fL https://github.com/skupperproject/skupper-cli/releases/download/0.0.1-alpha/linux.tgz -o skupper.tgz
+   curl -fL https://github.com/skupperproject/skupper-cli/releases/download/0.0.1-beta3/linux.tgz -o skupper.tgz
    mkdir -p $HOME/bin
    tar -xf skupper.tgz --directory $HOME/bin
    export PATH=$PATH:$HOME/bin
