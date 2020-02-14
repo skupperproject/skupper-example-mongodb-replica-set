@@ -26,14 +26,3 @@ spec:
         - name: mongodb-data
           emptyDir: {}
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo-svc-a
-spec:
-  ports:
-  - port: 27017
-    targetPort: 27017
-  selector:
-    application: mongo-a
----

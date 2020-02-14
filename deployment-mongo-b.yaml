@@ -2,22 +2,22 @@
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata: 
-  name: mongo-c
+  name: mongo-b
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        application: mongo-c
+        application: mongo-b
     spec:
       containers: 
         - image: mongo
-          name: mongo-c
+          name: mongo-b
           command:
             - mongod
             - "--replSet"
             - rs0
-            - "--bind_ip_all"
+            - "--bind_ip_all"          
           imagePullPolicy: IfNotPresent
           volumeMounts: 
             - mountPath: /data/db
@@ -25,15 +25,4 @@ spec:
       volumes: 
         - name: mongodb-data
           emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: mongo-svc-c
-spec:
-  ports:
-  - port: 27017
-    targetPort: 27017
-  selector:
-    application: mongo-c
 ---
