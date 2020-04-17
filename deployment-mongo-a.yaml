@@ -1,10 +1,15 @@
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata: 
   name: mongo-a
+  labels:
+    application: mongo-a
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      application: mongo-a
   template:
     metadata:
       labels:
