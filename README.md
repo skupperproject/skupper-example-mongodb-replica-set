@@ -66,7 +66,7 @@ On each cluster, using the `skupper` tool, define the Virtual Application Networ
 3. In the terminal for the private cluster, deploy the **private1** application router and define its connections to the public clusters
 
    ```bash
-   skupper init --edge --site-name private1
+   skupper init --site-name private1
    skupper connect public1-token.yaml
    skupper connect public2-token.yaml
    ```
@@ -162,7 +162,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 
    ```bash
    > use test
-   > db.setSlaveOk()
+   > db.setSecondaryOk()
    > db.coll.count()
    > db.coll.find()
    ```
@@ -176,7 +176,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 
    ```bash
    > use test
-   > db.setSlaveOk()
+   > db.setSecondaryOk()
    > db.coll.count()
    > db.coll.find()
    ```
