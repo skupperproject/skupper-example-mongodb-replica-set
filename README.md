@@ -19,7 +19,7 @@ To complete this tutorial, do the following:
 ## Prerequisites
 
 * The `kubectl` command-line tool, version 1.15 or later ([installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/))
-* The `skupper` command-line tool, the latest version ([installation guide](https://skupper.io/start/index.html#step-1-install-the-skupper-command-line-tool-in-your-environment))
+* The `skupper` command-line tool, version 0.5 or later ([installation guide](https://skupper.io/start/index.html#step-1-install-the-skupper-command-line-tool-in-your-environment))
 
 The basis for the demonstration is to depict the operation of a MongoDB replica set across distributed clusters. You should have access to three independent clusters to operate and observe the distribution of services over a Virtual Application Network. As an example, the three cluster might be comprised of:
 
@@ -52,81 +52,110 @@ On each cluster, using the `skupper` tool, define the Virtual Application Networ
 
    ```bash
    skupper init --site-name public1
-   skupper connection-token public1-token.yaml
+   skupper token create public1-token.yaml
    ```
 
 2. In the terminal for the second public cluster, deploy the **public2** application router, create a connection token for connections from the **private1** cluser and connect to the **public1** cluster:
 
    ```bash
    skupper init --site-name public2
-   skupper connection-token public2-token.yaml
-   skupper connect public1-token.yaml
+   skupper token create public2-token.yaml
+   skupper link create public1-token.yaml
    ```
 
 3. In the terminal for the private cluster, deploy the **private1** application router and define its connections to the public clusters
 
    ```bash
    skupper init --site-name private1
-   skupper connect public1-token.yaml
-   skupper connect public2-token.yaml
+   skupper link create public1-token.yaml
+   skupper link create public2-token.yaml
    ```
    
 ## Step 3: Deploy the MongoDB servers
 
 After creating the Skupper network, deploy the servers for the three-member MongoDB replica set. The member in the private cloud will be designated as the primary, and the members on the public cloud clusters will be redundant backups.
 
-1. In the terminal for the *private1* cluster, deploy the primary MongoDB member:
+1. In the terminal for the **private1** cluster, deploy the primary MongoDB member:
 
    ```bash
    kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-a.yaml
    ```
 
-2. In the terminal for the *public1* cluster, deploy the first backup MongoDB member:
+2. In the terminal for the **public1** cluster, deploy the first backup MongoDB member:
 
    ```bash
    kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-b.yaml
    ```
 
-3. In the terminal for the *public2* cluster, deploy the second backup MongoDB member:
+3. In the terminal for the **public2** cluster, deploy the second backup MongoDB member:
 
    ```bash
    kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-c.yaml
    ```
 
-## Step 4: Expose the deployments to the Virtual Application Network
+## Step 4: Create Skupper services for the Virtual Application Network
 
 
-1. In the terminal for the *private1* cluster, expose the mongo-a deployment:
+1. In the terminal for the **private1** cluster, create the mongo-a service:
 
    ```bash
-   skupper expose deployment mongo-a --address mongo-a --port 27017 --protocol tcp --target-port 27017
+   skupper service create mongo-a 27017
    ```
 
-2. In the terminal for the *public1* cluster, annotate the mongo-b deployment:
+2. In the terminal for the **public1** cluster, create the mongo-b service:
 
    ```bash
-   skupper expose deployment mongo-b --address mongo-b --port 27017 --protocol tcp --target-port 27017
+   skupper service create mongo-b 27017
    ```
 
-3. In the terminal for the *public2* cluster, annotate the mongo-c deployment:
+3. In the terminal for the **public2** cluster, create the mongo-c service:
 
    ```bash
-   skupper expose deployment mongo-c --address mongo-c --port 27017 --protocol tcp --target-port 27017
+   skupper service create mongo-c 27017
    ```
 
-4. In each of the cluster terminals, verify the exposed service is present
+4. In each of the cluster terminals, verify the services created are present
 
    ```bash
-   skupper list-exposed
+   skupper service status
+   ```
+
+    Note that the mapping for the service address defaults to `tcp`.
+
+## Step 5: Bind the Skupper services to the deployment targets on the Virtual Application Network
+
+
+1. In the terminal for the **private1** cluster, expose the mongo-a deployment:
+
+   ```bash
+   skupper service bind mongo-a deployment mongo-a
+   ```
+
+2. In the terminal for the **public1** cluster, annotate the mongo-b deployment:
+
+   ```bash
+   skupper service bind mongo-b deployment mongo-b
+   ```
+
+3. In the terminal for the **public2** cluster, annotate the mongo-c deployment:
+
+   ```bash
+   skupper service bind mongo-c deployment mongo-c
+   ```
+
+4. In each of the cluster terminals, verify the services bind to the targets
+
+   ```bash
+   skupper service status
    ```
 
     Note that each cluster depicts the target it provides.
 
-## Step 5: Form the MongoDB replica set
+## Step 6: Form the MongoDB replica set
 
 After deploying the MongoDB members into the private and public cloud clusters, form them into a replica set. The application router network connects the members and enables them to form the replica set even though they are running in separate clusters.  
 
-1. In the terminal for the private cloud, use the `mongo` shell to connect to
+1. In the terminal for the **private1** cluser, use the `mongo` shell to connect to
 the `mongo-a` instance and initiate the member set formation:
 
    ```bash
@@ -141,7 +170,7 @@ the `mongo-a` instance and initiate the member set formation:
    > rs.status()
    ```
 
-## Step 6: Insert documents and observe replication
+## Step 7: Insert documents and observe replication
 
 Now that the MongoDB members have formed a replica set and are connected by the application router network, you can insert some documents on the primary member, and see them replicated to the backup members.
 
