@@ -8,11 +8,12 @@ To complete this tutorial, do the following:
 
 * [Prerequisites](#prerequisites)
 * [Step 1: Set up the demo](#step-1-set-up-the-demo)
-* [Step 2: Deploy the Virtual Application Network](#step-4-deploy-the-virtual-application-network)
-* [Step 3: Deploy the MongoDB servers](#step-5-deploy-the-mongodb-servers)
-* [Step 4: Expose the deployments to the Virtual Application Network](#step-5-expose-the-deployments-to-the-virtual-application-network)
-* [Step 5: Form the MongoDB replica set](#step-6-form-the-mongodb-replica-set)
-* [Step 6: Insert documents and observe replication](#step-7-insert-documents-and-observe-replication)
+* [Step 2: Deploy the Virtual Application Network](#step-2-deploy-the-virtual-application-network)
+* [Step 3: Deploy the MongoDB servers](#step-3-deploy-the-mongodb-servers)
+* [Step 4: Create Skupper services for the Virtual Application Network](#step-4-create-skupper-services-for-the-virtual-application-network)
+* [Step 5: Bind the Skupper services to the deployment targets on the Virtual Application Network](#step-5-bind-the-skupper-services-to-the-deployment-targets-on-the-virtual-application-network)
+* [Step 6: Form the MongoDB replica set](#step-6-form-the-mongodb-replica-set)
+* [Step 7: Insert documents and observe replication](#step-7-insert-documents-and-observe-replication)
 * [Cleaning up](#cleaning-up)
 * [Next steps](#next-steps)
 
@@ -30,7 +31,7 @@ While the detailed steps are not included here, this demonstration can alternati
 
 ## Step 1: Set up the demo
 
-1. On your local machine, make a directory for this tutorial, clone the example repo, and download the skupper-cli tool:
+1. On your local machine, make a directory for this tutorial and clone the example repo into it:
 
    ```bash
    mkdir mongodb-demo
@@ -55,7 +56,7 @@ On each cluster, using the `skupper` tool, define the Virtual Application Networ
    skupper token create public1-token.yaml
    ```
 
-2. In the terminal for the second public cluster, deploy the **public2** application router, create a connection token for connections from the **private1** cluser and connect to the **public1** cluster:
+2. In the terminal for the second public cluster, deploy the **public2** application router. Create a connection token for connections from the **private1** cluser and connect to the **public1** cluster:
 
    ```bash
    skupper init --site-name public2
@@ -63,7 +64,7 @@ On each cluster, using the `skupper` tool, define the Virtual Application Networ
    skupper link create public1-token.yaml
    ```
 
-3. In the terminal for the private cluster, deploy the **private1** application router and define its connections to the public clusters
+3. In the terminal for the private cluster, deploy the **private1** application router. Connect to the **public1** and **public2** clusters;
 
    ```bash
    skupper init --site-name private1
@@ -114,7 +115,7 @@ After creating the Skupper network, deploy the servers for the three-member Mong
    skupper service create mongo-c 27017
    ```
 
-4. In each of the cluster terminals, verify the services created are present
+4. In each of the cluster terminals, verify the services created are present:
 
    ```bash
    skupper service status
@@ -210,11 +211,11 @@ Now that the MongoDB members have formed a replica set and are connected by the 
    > db.coll.find()
    ```
 
-## Next steps
+## Cleaning up
 
 Restore your cluster environment by returning the resource created in the demonstration. On each cluster, delete the demo resources and the skupper network:
 
-1. In the terminal for the *private1* cluster, delete the resources:
+1. In the terminal for the **private1** cluster, delete the resources:
 
 
    ```bash
@@ -223,7 +224,7 @@ Restore your cluster environment by returning the resource created in the demons
    $ skupper delete
    ```
 
-2. In the terminal for the *public1* cluster, delete the resources:
+2. In the terminal for the **public1** cluster, delete the resources:
 
 
    ```bash
@@ -232,7 +233,7 @@ Restore your cluster environment by returning the resource created in the demons
    $ skupper delete
    ```
 
-3. In the terminal for the *public2* cluster, delete the resources:
+3. In the terminal for the **public2** cluster, delete the resources:
 
 
    ```bash
@@ -241,3 +242,6 @@ Restore your cluster environment by returning the resource created in the demons
    $ skupper delete
    ```
 
+## Next Steps
+
+ - [Find more examples](https://skupper.io/examples/)
