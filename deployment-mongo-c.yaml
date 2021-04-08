@@ -22,8 +22,9 @@ spec:
             - mongod
             - "--replSet"
             - rs0
-            - "--bind_ip_all"
-          imagePullPolicy: IfNotPresent
+            - "--bind_ip"
+            - "*"
+          imagePullPolicy: Always
           volumeMounts: 
             - mountPath: /data/db
               name: mongodb-data
