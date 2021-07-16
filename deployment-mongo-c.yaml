@@ -16,7 +16,7 @@ spec:
         application: mongo-c
     spec:
       containers: 
-        - image: mongo
+        - image: mongo:4.4
           name: mongo-c
           command:
             - mongod
