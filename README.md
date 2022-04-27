@@ -21,6 +21,7 @@ To complete this tutorial, do the following:
 
 * The `kubectl` command-line tool, version 1.15 or later ([installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/))
 * The `skupper` command-line tool, version 0.5 or later ([installation guide](https://skupper.io/start/index.html#step-1-install-the-skupper-command-line-tool-in-your-environment))
+* The `mongo` command-line tool 4.4 or later ***(Optional)*** ([installation guide](https://www.mongodb.com/docs/mongocli/stable/install/))
 
 The basis for the demonstration is to depict the operation of a MongoDB replica set across distributed clusters. You should have access to three independent clusters to operate and observe the distribution of services over a Virtual Application Network. As an example, the three cluster might be comprised of:
 
@@ -53,7 +54,7 @@ On each cluster, using the `skupper` tool, define the Virtual Application Networ
 
    ```bash
    skupper init --site-name public1
-   skupper token create public1-token.yaml
+   skupper token create public1-token.yaml --uses 2
    ```
 
 2. In the terminal for the second public cluster, deploy the **public2** application router. Create a connection token for connections from the **private1** cluser and connect to the **public1** cluster:
@@ -159,10 +160,25 @@ After deploying the MongoDB members into the private and public cloud clusters, 
 1. In the terminal for the **private1** cluser, use the `mongo` shell to connect to
 the `mongo-a` instance and initiate the member set formation:
 
+   1.1. Use this if you have the mongo (command-line tool) installed and you are running your private1 site locally
+
    ```bash
    $ cd ~/mongodb-demo/skupper-example-mongodb-replica-set
    $ mongo --host $(kubectl get service mongo-a -o=jsonpath='{.spec.clusterIP}')
    > load("replica.js")
+   ```
+
+   1.2. Alternatively you can initiate the member set running the mongo command-line tool inside your running pod
+   ```bash
+   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-a
+   > rs.initiate( {
+        _id : "rs0",
+        members: [
+           { _id: 0, host: "mongo-a:27017" },
+           { _id: 1, host: "mongo-b:27017" },
+           { _id: 2, host: "mongo-c:27017" }
+        ]
+     })
    ```
 
 2. Verify the status of the members array.
@@ -187,7 +203,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 2. Using the mongo shell, check the first backup member to verify that it has a copy of the documents that you inserted:
 
    ```bash
-   $ mongo --host $(kubectl get service mongo-b -o=jsonpath='{.spec.clusterIP}')
+   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-b
    ```
 
    ```bash
@@ -201,7 +217,7 @@ Now that the MongoDB members have formed a replica set and are connected by the 
 3. Using the mongo shell, check the second backup member to verify that it also has a copy of the documents that you inserted.
 
    ```bash
-   $ mongo --host $(kubectl get service mongo-c -o=jsonpath='{.spec.clusterIP}')
+   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-c
    ```
 
    ```bash
