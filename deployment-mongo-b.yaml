@@ -1,7 +1,7 @@
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: 
+metadata:
   name: mongo-b
   labels:
     application: mongo-b
@@ -15,8 +15,8 @@ spec:
       labels:
         application: mongo-b
     spec:
-      containers: 
-        - image: mongo:5.0
+      containers:
+        - image: quay.io/dhashimo/mongo:5.0
           name: mongo-b
           command:
             - mongod
@@ -25,10 +25,10 @@ spec:
             - "--bind_ip"
             - "*"
           imagePullPolicy: Always
-          volumeMounts: 
+          volumeMounts:
             - mountPath: /data/db
               name: mongodb-data
-      volumes: 
+      volumes:
         - name: mongodb-data
           emptyDir: {}
 ---
