@@ -24,7 +24,7 @@ spec:
             - rs0
             - "--bind_ip"
             - "*"
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           volumeMounts:
             - mountPath: /data/db
               name: mongodb-data
