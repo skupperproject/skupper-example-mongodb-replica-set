@@ -1,7 +1,7 @@
 ---
 apiVersion: apps/v1
 kind: Deployment
-metadata: 
+metadata:
   name: mongo-c
   labels:
     application: mongo-c
@@ -15,8 +15,8 @@ spec:
       labels:
         application: mongo-c
     spec:
-      containers: 
-        - image: mongo:5.0
+      containers:
+        - image: mirror.gcr.io/library/mongo:5.0
           name: mongo-c
           command:
             - mongod
@@ -24,11 +24,11 @@ spec:
             - rs0
             - "--bind_ip"
             - "*"
-          imagePullPolicy: Always
-          volumeMounts: 
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
             - mountPath: /data/db
               name: mongodb-data
-      volumes: 
+      volumes:
         - name: mongodb-data
           emptyDir: {}
 ---
