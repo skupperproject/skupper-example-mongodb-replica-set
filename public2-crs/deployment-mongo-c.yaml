@@ -2,22 +2,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mongo-a
+  name: mongo-c
   labels:
-    application: mongo-a
+    application: mongo-c
 spec:
   replicas: 1
   selector:
     matchLabels:
-      application: mongo-a
+      application: mongo-c
   template:
     metadata:
       labels:
-        application: mongo-a
+        application: mongo-c
     spec:
       containers:
-        - image: mirror.gcr.io/library/mongo:5.0
-          name: mongo-a
+        - image: mirror.gcr.io/library/mongo:8.0
+          name: mongo-c
           command:
             - mongod
             - "--replSet"
