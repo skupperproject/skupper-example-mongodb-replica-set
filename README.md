@@ -1,263 +1,494 @@
-# Deploying a MongoDB database replica set across clusters
+<!-- NOTE: This file is generated from skewer.yaml.  Do not edit it directly. -->
 
-This tutorial demonstrates how to share a MongoDB database across multiple Kubernetes clusters that are located in different public and private cloud providers.
+# Accessing a distributed Mongo database using Skupper
 
-In this tutorial, you will deploy a three-member MongoDB replica set in which each member is located in its own cluster. You will also create a Virtual Application Nework for the servers, which will enable the members to form the replica set and communicate with each other.
+[![main](https://github.com/lynnemorrison/skupper-example-mongodb-replica-set/actions/workflows/main.yaml/badge.svg)](https://github.com/lynnemorrison/skupper-example-mongodb-replica-set/actions/workflows/main.yaml)
 
-To complete this tutorial, do the following:
+#### Deploying a MongoDB database replica set across clusters
 
+This example is part of a [suite of examples][examples] showing the
+different ways you can use [Skupper][website] to connect services
+across cloud providers, data centers, and edge sites.
+
+[website]: https://skupper.io/
+[examples]: https://skupper.io/examples/index.html
+
+#### Contents
+
+* [Overview](#overview)
 * [Prerequisites](#prerequisites)
-* [Step 1: Set up the demo](#step-1-set-up-the-demo)
-* [Step 2: Deploy the Virtual Application Network](#step-2-deploy-the-virtual-application-network)
-* [Step 3: Deploy the MongoDB servers](#step-3-deploy-the-mongodb-servers)
-* [Step 4: Create Skupper services for the Virtual Application Network](#step-4-create-skupper-services-for-the-virtual-application-network)
-* [Step 5: Bind the Skupper services to the deployment targets on the Virtual Application Network](#step-5-bind-the-skupper-services-to-the-deployment-targets-on-the-virtual-application-network)
-* [Step 6: Form the MongoDB replica set](#step-6-form-the-mongodb-replica-set)
-* [Step 7: Insert documents and observe replication](#step-7-insert-documents-and-observe-replication)
-* [Cleaning up](#cleaning-up)
+* [Step 1: Install the Skupper command-line tool](#step-1-install-the-skupper-command-line-tool)
+* [Step 2: Access your Kubernetes clusters](#step-2-access-your-kubernetes-clusters)
+* [Step 3: Install Skupper on your Kubernetes clusters](#step-3-install-skupper-on-your-kubernetes-clusters)
+* [Step 4: Create your sites](#step-4-create-your-sites)
+* [Step 5: Link your sites](#step-5-link-your-sites)
+* [Step 6: Deploy MongoDB Servers](#step-6-deploy-mongodb-servers)
+* [Step 7: Create Skupper services for the Virtual Application Network](#step-7-create-skupper-services-for-the-virtual-application-network)
+* [Step 8: Form the MongoDB replica set](#step-8-form-the-mongodb-replica-set)
+* [Step 9: Insert documents](#step-9-insert-documents)
+* [Step 10: Observe replication](#step-10-observe-replication)
+* [Step 11: Cleaning up](#step-11-cleaning-up)
 * [Next steps](#next-steps)
+* [About this example](#about-this-example)
+
+## Overview
+
+This tutorial demonstrates how to share a MongoDB database across multiple
+Kubernetes clusters that are located in different public and private cloud
+providers.
+
+In this tutorial, you will deploy a three-member MongoDB replica set in which
+each member is located in its own cluster. You will also create a Virtual
+Application Nework for the servers, which will enable the members to form the
+replica set and communicate with each other.
 
 ## Prerequisites
 
-* The `kubectl` command-line tool, version 1.15 or later ([installation guide](https://kubernetes.io/docs/tasks/tools/install-kubectl/))
-* The `skupper` command-line tool, version 0.5 or later ([installation guide](https://skupper.io/start/index.html#step-1-install-the-skupper-command-line-tool-in-your-environment))
-* The `mongo` command-line tool 4.4 or later ***(Optional)*** ([installation guide](https://www.mongodb.com/docs/mongocli/stable/install/))
+* Access to at least one Kubernetes cluster, from [any provider you
+  choose][kube-providers].
 
-The basis for the demonstration is to depict the operation of a MongoDB replica set across distributed clusters. You should have access to three independent clusters to operate and observe the distribution of services over a Virtual Application Network. As an example, the three cluster might be comprised of:
+* The `kubectl` command-line tool, version 1.15 or later
+  ([installation guide][install-kubectl]).
 
-* A private cloud cluster running on your local machine
-* Two public cloud clusters running in public cloud providers
+* The `skupper` command-line tool, version 2.0 or later.  On Linux
+  or Mac, you can use the install script (inspect it
+  [here][cli-install-script]) to download and extract the command:
 
-While the detailed steps are not included here, this demonstration can alternatively be performed with three separate namespaces on a single cluster. 
+[kube-providers]: https://skupper.io/start/kubernetes.html
+[install-kubectl]: https://kubernetes.io/docs/tasks/tools/install-kubectl/
+[cli-install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
+[cli-install-docs]: https://skupper.io/install/
 
-## Step 1: Set up the demo
+## Step 1: Install the Skupper command-line tool
 
-1. On your local machine, make a directory for this tutorial and clone the example repo into it:
+This example uses the Skupper command-line tool to create Skupper
+resources.  You need to install the `skupper` command only once
+for each development environment.
 
-   ```bash
-   mkdir mongodb-demo
-   cd mongodb-demo
-   git clone https://github.com/skupperproject/skupper-example-mongodb-replica-set.git
-   ```
+On Linux or Mac, you can use the install script (inspect it
+[here][install-script]) to download and extract the command:
 
-2. Prepare the target clusters.
+~~~ shell
+curl https://skupper.io/install.sh | sh -s -- --version 2.0.0
+~~~
 
-   1. On your local machine, log in to each cluster in a separate terminal session.
-   2. In each cluster, create a namespace to use for the demo.
-   3. In each cluster, set the kubectl config context to use the demo namespace [(see kubectl cheat sheet)](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+The script installs the command under your home directory.  It
+prompts you to add the command to your path if necessary.
 
-## Step 2: Deploy the Virtual Application Network
+For Windows and other installation options, see [Installing
+Skupper][install-docs].
 
-On each cluster, using the `skupper` tool, define the Virtual Application Network and the connectivity for the peer clusters.
+[install-script]: https://github.com/skupperproject/skupper-website/blob/main/input/install.sh
+[install-docs]: https://skupper.io/install/
 
-1. In the terminal for the first public cluster, deploy the **public1** application router. Create a connection token for connections from the **public2** cluster and the **private1** cluster:
+## Step 2: Access your Kubernetes clusters
 
-   ```bash
-   skupper init --site-name public1
-   skupper token create public1-token.yaml --uses 2
-   ```
+Skupper is designed for use with multiple Kubernetes clusters.
+The `skupper` and `kubectl` commands use your
+[kubeconfig][kubeconfig] and current context to select the cluster
+and namespace where they operate.
 
-2. In the terminal for the second public cluster, deploy the **public2** application router. Create a connection token for connections from the **private1** cluser and connect to the **public1** cluster:
+[kubeconfig]: https://kubernetes.io/docs/concepts/configuration/organize-cluster-access-kubeconfig/
 
-   ```bash
-   skupper init --site-name public2
-   skupper token create public2-token.yaml
-   skupper link create public1-token.yaml
-   ```
+This example uses multiple cluster contexts at once. The
+`KUBECONFIG` environment variable tells `skupper` and `kubectl`
+which kubeconfig to use.
 
-3. In the terminal for the private cluster, deploy the **private1** application router. Connect to the **public1** and **public2** clusters;
+For each cluster, open a new terminal window.  In each terminal,
+set the `KUBECONFIG` environment variable to a different path and
+log in to your cluster.
 
-   ```bash
-   skupper init --site-name private1
-   skupper link create public1-token.yaml
-   skupper link create public2-token.yaml
-   ```
-   
-## Step 3: Deploy the MongoDB servers
+_**Public1:**_
 
-After creating the Skupper network, deploy the servers for the three-member MongoDB replica set. The member in the private cloud will be designated as the primary, and the members on the public cloud clusters will be redundant backups.
+~~~ shell
+export KUBECONFIG=~/.kube/config-public1
+#Enter your provider-specific login command
+kubectl create namespace public1
+kubectl config set-context --current --namespace public1
+~~~
 
-1. In the terminal for the **private1** cluster, deploy the primary MongoDB member:
+_**Public2:**_
 
-   ```bash
-   kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-a.yaml
-   ```
+~~~ shell
+export KUBECONFIG=~/.kube/config-public2
+#Enter your provider-specific login command
+kubectl create namespace public2
+kubectl config set-context --current --namespace public2
+~~~
 
-2. In the terminal for the **public1** cluster, deploy the first backup MongoDB member:
+_**Private1:**_
 
-   ```bash
-   kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-b.yaml
-   ```
+~~~ shell
+export KUBECONFIG=~/.kube/config-private1
+#Enter your provider-specific login command
+kubectl create namespace private1
+kubectl config set-context --current --namespace private1
+~~~
 
-3. In the terminal for the **public2** cluster, deploy the second backup MongoDB member:
+**Note:** The login procedure varies by provider.
 
-   ```bash
-   kubectl apply -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-c.yaml
-   ```
+## Step 3: Install Skupper on your Kubernetes clusters
 
-## Step 4: Create Skupper services for the Virtual Application Network
+Using Skupper on Kubernetes requires the installation of the
+Skupper custom resource definitions (CRDs) and the Skupper
+controller.
 
+For each cluster, use `kubectl apply` with the Skupper
+installation YAML to install the CRDs and controller.
 
-1. In the terminal for the **private1** cluster, create the mongo-a service:
+_**Public1:**_
 
-   ```bash
-   skupper service create mongo-a 27017
-   ```
+~~~ shell
+kubectl apply -f https://skupper.io/v2/install.yaml
+~~~
 
-2. In the terminal for the **public1** cluster, create the mongo-b service:
+_**Public2:**_
 
-   ```bash
-   skupper service create mongo-b 27017
-   ```
+~~~ shell
+kubectl apply -f https://skupper.io/v2/install.yaml
+~~~
 
-3. In the terminal for the **public2** cluster, create the mongo-c service:
+_**Private1:**_
 
-   ```bash
-   skupper service create mongo-c 27017
-   ```
+~~~ shell
+kubectl apply -f https://skupper.io/v2/install.yaml
+~~~
 
-4. In each of the cluster terminals, verify the services created are present:
+## Step 4: Create your sites
 
-   ```bash
-   skupper service status
-   ```
+A Skupper _site_ is a location where components of your
+application are running.  Sites are linked together to form a
+network for your application.  In Kubernetes, a site is associated
+with a namespace.
 
-    Note that the mapping for the service address defaults to `tcp`.
+Use the kubectl apply command to declaratively create sites in the kubernetes
+namespaces. This deploys the Skupper router. Then use kubectl get site to see
+the outcome.
 
-## Step 5: Bind the Skupper services to the deployment targets on the Virtual Application Network
+**Note:** If you are using Minikube, you need to [start minikube
+tunnel][minikube-tunnel] before you run `skupper init`.
 
+[minikube-tunnel]: https://skupper.io/start/minikube.html#running-minikube-tunnel
 
-1. In the terminal for the **private1** cluster, expose the mongo-a deployment:
+_**Public1:**_
 
-   ```bash
-   skupper service bind mongo-a deployment mongo-a
-   ```
+~~~ shell
+kubectl apply -f ./public1-crs/site.yaml
+kubectl wait --for condition=Ready --timeout=3m site/public1
+~~~
 
-2. In the terminal for the **public1** cluster, annotate the mongo-b deployment:
+_Sample output:_
 
-   ```bash
-   skupper service bind mongo-b deployment mongo-b
-   ```
+~~~ console
+$ kubectl wait --for condition=Ready --timeout=3m site/public1
+site.skupper.io/public1 created
+site.skupper.io/public1 condition met
+~~~
 
-3. In the terminal for the **public2** cluster, annotate the mongo-c deployment:
+_**Public2:**_
 
-   ```bash
-   skupper service bind mongo-c deployment mongo-c
-   ```
+~~~ shell
+kubectl apply -f ./public2-crs/site.yaml
+kubectl wait --for condition=Ready --timeout=3m site/public2
+~~~
 
-4. In each of the cluster terminals, verify the services bind to the targets
+_Sample output:_
 
-   ```bash
-   skupper service status
-   ```
+~~~ console
+$ kubectl wait --for condition=Ready --timeout=3m site/public2
+site.skupper.io/public2 created
+site.skupper.io/public2 condition met
+~~~
 
-    Note that each cluster depicts the target it provides.
+_**Private1:**_
 
-## Step 6: Form the MongoDB replica set
+~~~ shell
+kubectl apply -f ./private1-crs/site.yaml
+kubectl wait --for condition=Ready --timeout=3m site/private1
+~~~
 
-After deploying the MongoDB members into the private and public cloud clusters, form them into a replica set. The application router network connects the members and enables them to form the replica set even though they are running in separate clusters.  
+_Sample output:_
 
-1. In the terminal for the **private1** cluser, use the `mongo` shell to connect to
-the `mongo-a` instance and initiate the member set formation:
+~~~ console
+$ kubectl wait --for condition=Ready --timeout=3m site/private1
+site.skupper.io/private1 created
+site.skupper.io/private1 condition met
+~~~
 
-   1.1. Use this if you have the mongo (command-line tool) installed and you are running your private1 site locally
+## Step 5: Link your sites
 
-   ```bash
-   $ cd ~/mongodb-demo/skupper-example-mongodb-replica-set
-   $ mongo --host $(kubectl get service mongo-a -o=jsonpath='{.spec.clusterIP}')
-   > load("replica.js")
-   ```
+A Skupper _link_ is a channel for communication between two sites.
+Links serve as a transport for application connections and
+requests.
 
-   1.2. Alternatively you can initiate the member set running the mongo command-line tool inside your running pod
-   ```bash
-   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-a
-   > rs.initiate( {
-        _id : "rs0",
-        members: [
-           { _id: 0, host: "mongo-a:27017" },
-           { _id: 1, host: "mongo-b:27017" },
-           { _id: 2, host: "mongo-c:27017" }
-        ]
-     })
-   ```
+Creating a link requires use of two `skupper` commands in
+conjunction, `skupper token issue` and `skupper token redeem`.
 
-2. Verify the status of the members array.
+The `skupper token issue` command generates a secret token that
+signifies permission to create a link.  The token also carries the
+link details.  Then, in a remote site, The `skupper token
+redeem` command uses the token to create a link to the site
+that generated it.
 
-   ```bash
-   > rs.status()
-   ```
+**Note:** The link token is truly a *secret*.  Anyone who has the
+token can link to your site.  Make sure that only those you trust
+have access to it.
 
-## Step 7: Insert documents and observe replication
+First, use `skupper token issue` in public1 to generate the
+token.  Then, use `skupper token redeem` in public2 to link the
+sites.  Using the flag redemptions-allowed specifies how many tokens
+are created.  In this scenario public2 and private1 will connect to
+public1 so we will need two tokens.
 
-Now that the MongoDB members have formed a replica set and are connected by the application router network, you can insert some documents on the primary member, and see them replicated to the backup members.
+_**Public1:**_
 
-1. While staying connected to the `mongo-a` shell, insert some documents:
+~~~ shell
+skupper token issue ./public1.token --redemptions-allowed 2
+~~~
 
-   ```bash
-   > use test
-   > for (i=0; i<1000; i++) {db.coll.insert({count: i})}
-   # make sure the docs are there:
-   > db.coll.count()
-   ```
+_**Public2:**_
 
-2. Using the mongo shell, check the first backup member to verify that it has a copy of the documents that you inserted:
+~~~ shell
+skupper token redeem ./public1.token
+skupper token issue ./public2.token
+~~~
 
-   ```bash
-   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-b
-   ```
+_**Private1:**_
 
-   ```bash
-   > use test
-   > db.setSecondaryOk()
-   > db.coll.count()
-   > db.coll.find()
-   ```
+~~~ shell
+skupper token redeem ./public1.token
+skupper token redeem ./public2.token
+~~~
 
+If your terminal sessions are on different machines, you may need
+to use `scp` or a similar tool to transfer the token securely.  By
+default, tokens expire after a single use or 15 minutes after
+creation.
 
-3. Using the mongo shell, check the second backup member to verify that it also has a copy of the documents that you inserted.
+## Step 6: Deploy MongoDB Servers
 
-   ```bash
-   $ kubectl exec -it deploy/mongo-a -- mongo --host mongo-c
-   ```
+After creating the Skupper network, deploy the servers for the three-member 
+MongoDB replica set. The member in the private cloud will be designated as the
+primary, and the members on the public cloud clusters will be redundant backups
 
-   ```bash
-   > use test
-   > db.setSecondaryOk()
-   > db.coll.count()
-   > db.coll.find()
-   ```
+_**Private1:**_
 
-## Cleaning up
+~~~ shell
+kubectl apply -f ./private1-crs/deployment-mongo-a.yaml
+~~~
 
-Restore your cluster environment by returning the resource created in the demonstration. On each cluster, delete the demo resources and the skupper network:
+_Sample output:_
 
-1. In the terminal for the **private1** cluster, delete the resources:
+~~~ console
+$ kubectl apply -f ./private1-crs/deployment-mongo-a.yaml
+deployment.apps/mongo-a created
+~~~
 
+_**Public1:**_
 
-   ```bash
-   $ skupper unexpose deployment mongo-a
-   $ kubectl delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-a.yaml
-   $ skupper delete
-   ```
+~~~ shell
+kubectl apply -f ./public1-crs/deployment-mongo-b.yaml
+~~~
 
-2. In the terminal for the **public1** cluster, delete the resources:
+_Sample output:_
 
+~~~ console
+$ kubectl apply -f ./public1-crs/deployment-mongo-b.yaml
+deployment.apps/mongo-b created
+~~~
 
-   ```bash
-   $ skupper unexpose deployment mongo-b
-   $ kubectl delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-b.yaml
-   $ skupper delete
-   ```
+_**Public2:**_
 
-3. In the terminal for the **public2** cluster, delete the resources:
+~~~ shell
+kubectl apply -f ./public2-crs/deployment-mongo-c.yaml
+~~~
 
+_Sample output:_
 
-   ```bash
-   $ skupper unexpose deployment mongo-c
-   $ kubectl delete -f ~/mongodb-demo/skupper-example-mongodb-replica-set/deployment-mongo-c.yaml
-   $ skupper delete
-   ```
+~~~ console
+$ kubectl apply -f ./public2-crs/deployment-mongo-c.yaml
+deployment.apps/mongo-c created
+~~~
 
-## Next Steps
+## Step 7: Create Skupper services for the Virtual Application Network
 
- - [Find more examples](https://skupper.io/examples/)
+Create Skupper listeners and connectors to expose the mongodb in each namespace.
+
+_**Private1:**_
+
+~~~ shell
+kubectl apply -f ./private1-crs/listener.yaml
+kubectl apply -f ./private1-crs/connector.yaml
+~~~
+
+_Sample output:_
+
+~~~ console
+$ kubectl apply -f ./private1-crs/connector.yaml
+listener.skupper.io/mongo-a created
+listener.skupper.io/mongo-c created
+listener.skupper.io/mongo-b created
+connector.skupper.io/mongo-a created
+~~~
+
+_**Public1:**_
+
+~~~ shell
+kubectl apply -f ./public1-crs/listener.yaml
+kubectl apply -f ./public1-crs/connector.yaml
+~~~
+
+_Sample output:_
+
+~~~ console
+$ kubectl apply -f ./public1-crs/connector.yaml
+listener.skupper.io/mongo-a created
+listener.skupper.io/mongo-c created
+listener.skupper.io/mongo-b created
+connector.skupper.io/mongo-b created
+~~~
+
+_**Public2:**_
+
+~~~ shell
+kubectl apply -f ./public2-crs/listener.yaml
+kubectl apply -f ./public2-crs/connector.yaml
+~~~
+
+_Sample output:_
+
+~~~ console
+$ kubectl apply -f ./public2-crs/connector.yaml
+listener.skupper.io/mongo-a created
+listener.skupper.io/mongo-c created
+listener.skupper.io/mongo-b created
+connector.skupper.io/mongo-c created
+~~~
+
+## Step 8: Form the MongoDB replica set
+
+After deploying the MongoDB members into the private and public cloud clusters,
+form them into a replica set. The application router network connects the members
+and enables them to form the replica set even though they are running in separate
+clusters.
+
+In the terminal for the private1 cluser, use the mongo shell to connect to the
+mongo-a instance and initiate the member set formation, making mongo-a the primary.
+
+_**Private1:**_
+
+~~~ shell
+kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
+#Execute the following command on the running pod:
+rs.initiate( { _id : "rs0", members: [
+{ _id: 0, host: "mongo-a:27017", priority: 1 },
+{ _id: 1, host: "mongo-b:27017", priority: 0.5 },
+{ _id: 2, host: "mongo-c:27017", priority: 0.5 }
+] })
+~~~
+
+## Step 9: Insert documents
+
+Now that the MongoDB members have formed a replica set and are connected by the
+application router network, you can insert some documents on the primary member,
+and see them replicated to the backup members.
+
+_**Private1:**_
+
+~~~ shell
+kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
+#Execute the following commands on the running pod:
+rs.status()
+for (i=0; i<1000; i++) {db.coll.insertOne({count: i})}
+db.coll.countDocuments()
+~~~
+
+_Sample output:_
+
+~~~ console
+$ db.coll.countDocuments()
+1000
+~~~
+
+## Step 10: Observe replication
+
+Using the mongo shell, check the backup members to verify that they have a copy
+of the documents that you inserted:
+
+_**Public1:**_
+
+~~~ shell
+kubectl exec -it deploy/mongo-b -- mongosh
+#Execute the following commands on the running pod:
+db.getMongo().setReadPref('secondary')
+db.coll.countDocuments()
+db.coll.find()
+~~~
+
+_Sample output:_
+
+~~~ console
+$ db.coll.countDocuments()
+1000
+~~~
+
+_**Public2:**_
+
+~~~ shell
+kubectl exec -it deploy/mongo-c -- mongosh
+#Execute the following commands on the running pod:
+db.getMongo().setReadPref('secondary')
+db.coll.countDocuments()
+db.coll.find()
+~~~
+
+_Sample output:_
+
+~~~ console
+$ db.coll.countDocuments()
+1000
+~~~
+
+## Step 11: Cleaning up
+
+Restore your cluster environment by returning the resource created in the
+demonstration. On each cluster, delete the demo resources and the skupper network:
+
+_**Private1:**_
+
+~~~ shell
+skupper site delete --all
+kubectl delete -f ./private1-crs/deployment-mongo-a.yaml
+~~~
+
+_**Public1:**_
+
+~~~ shell
+skupper site delete --all
+kubectl delete -f ./public1-crs/deployment-mongo-b.yaml
+~~~
+
+_**Public2:**_
+
+~~~ shell
+skupper site delete --all
+kubectl delete -f ./public2-crs/deployment-mongo-c.yaml
+~~~
+
+## Next steps
+
+Check out the other [examples][examples] on the Skupper website.
+
+## About this example
+
+This example was produced using [Skewer][skewer], a library for
+documenting and testing Skupper examples.
+
+[skewer]: https://github.com/skupperproject/skewer
+
+Skewer provides utility functions for generating the README and
+running the example steps.  Use the `./plano` command in the project
+root to see what is available.
+
+To quickly stand up the example using Minikube, try the `./plano demo`
+command.

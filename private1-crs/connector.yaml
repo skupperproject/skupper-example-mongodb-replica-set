@@ -1,0 +1,8 @@
+apiVersion: skupper.io/v2alpha1
+kind: Connector
+metadata:
+  name: mongo-a
+spec:
+  routingKey: mongo-a
+  port: 27017
+  selector: application=mongo-a

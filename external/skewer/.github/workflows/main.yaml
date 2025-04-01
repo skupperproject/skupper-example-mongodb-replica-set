@@ -1,0 +1,24 @@
+name: main
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 0 * * 0"
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        skupper-version: [2.0.0-preview-2]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - uses: medyagh/setup-minikube@latest
+      - run: curl https://skupper.io/install.sh | bash -s -- --version ${{matrix.skupper-version}}
+      - run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+      - run: ./plano test
+        env:
+          PLANO_COLOR: 1

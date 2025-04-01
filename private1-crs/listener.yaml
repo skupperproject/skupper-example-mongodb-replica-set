@@ -1,0 +1,28 @@
+---
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: mongo-c
+spec:
+  routingKey: mongo-c
+  port: 27017
+  host: mongo-c
+---
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: mongo-b
+spec:
+  routingKey: mongo-b
+  port: 27017
+  host: mongo-b
+---
+apiVersion: skupper.io/v2alpha1
+kind: Listener
+metadata:
+  name: mongo-a
+spec:
+  routingKey: mongo-a
+  port: 27017
+  host: mongo-a
+  exposePodsByName: true
