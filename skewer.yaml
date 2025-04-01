@@ -165,7 +165,7 @@ steps:
         - await_resource: service/mongo-b
         - await_resource: service/mongo-c
         - run: kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
-        - run: '#Execute the following on the running pod:'
+        - run: '#Execute the following command on the running pod:'
         - run: 'rs.initiate( { _id : "rs0", members: ['
         - run: '  { _id: 0, host: "mongo-a:27017", priority: 1 },'
         - run: '  { _id: 1, host: "mongo-b:27017", priority: 0.5 },'
@@ -179,7 +179,8 @@ steps:
     commands:
       private1:
         - run: kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
-        - run: '#Execute the following on the running pod:'
+        - run: '#Execute the following commands on the running pod:'
+        - run: rs.status()
         - run: "for (i=0; i<1000; i++) {db.coll.insertOne({count: i})}"
         - run: db.coll.countDocuments()
           output: |
@@ -191,7 +192,7 @@ steps:
     commands:
       public1:
         - run: kubectl exec -it deploy/mongo-b -- mongosh
-        - run: '#Execute the following on the running pod:'
+        - run: '#Execute the following commands on the running pod:'
         - run: db.getMongo().setReadPref('secondary')
         - run: db.coll.countDocuments()
           output: |
@@ -199,7 +200,7 @@ steps:
         - run: db.coll.find()
       public2:
         - run: kubectl exec -it deploy/mongo-c -- mongosh
-        - run: '#Execute the following on the running pod:'
+        - run: '#Execute the following commands on the running pod:'
         - run: db.getMongo().setReadPref('secondary')
         - run: db.coll.countDocuments()
           output: |

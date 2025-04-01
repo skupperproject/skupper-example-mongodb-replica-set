@@ -379,7 +379,7 @@ _**Private1:**_
 
 ~~~ shell
 kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
-#Execute the following on the running pod:
+#Execute the following command on the running pod:
 rs.initiate( { _id : "rs0", members: [
 { _id: 0, host: "mongo-a:27017", priority: 1 },
 { _id: 1, host: "mongo-b:27017", priority: 0.5 },
@@ -397,7 +397,8 @@ _**Private1:**_
 
 ~~~ shell
 kubectl exec -it deploy/mongo-a -- mongosh --host mongo-a
-#Execute the following on the running pod:
+#Execute the following commands on the running pod:
+rs.status()
 for (i=0; i<1000; i++) {db.coll.insertOne({count: i})}
 db.coll.countDocuments()
 ~~~
@@ -418,7 +419,7 @@ _**Public1:**_
 
 ~~~ shell
 kubectl exec -it deploy/mongo-b -- mongosh
-#Execute the following on the running pod:
+#Execute the following commands on the running pod:
 db.getMongo().setReadPref('secondary')
 db.coll.countDocuments()
 db.coll.find()
@@ -435,7 +436,7 @@ _**Public2:**_
 
 ~~~ shell
 kubectl exec -it deploy/mongo-c -- mongosh
-#Execute the following on the running pod:
+#Execute the following commands on the running pod:
 db.getMongo().setReadPref('secondary')
 db.coll.countDocuments()
 db.coll.find()
